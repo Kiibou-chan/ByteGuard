@@ -1,5 +1,7 @@
 plugins {
-    kotlin("jvm")
+    java
+
+    `java-library`
 }
 
 group = "space.kiibou.jguard"
@@ -12,8 +14,7 @@ repositories {
 dependencies {
     // Test Dependencies
 
-    testImplementation(kotlin("test"))
-    testImplementation(kotlin("test-junit"))
+    testImplementation("org.junit.jupiter:junit-jupiter:5.9.1")
 }
 
 tasks.getByName<Test>("test") {
