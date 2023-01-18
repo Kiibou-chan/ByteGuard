@@ -83,8 +83,8 @@ class SpecForProcessor : AbstractProcessor() {
         val methodMap = getMethodMap(specifiedClass, methodSpecs)
 
         return ClassSpecificationInfo(
-            ClassifierType(element.qualifiedName.toString()),
-            ClassifierType(specifiedClass.qualifiedName.toString()),
+            element.toClassifierType(),
+            specifiedClass.toClassifierType(),
             methodMap.map { (spec, target) ->
                 MethodSpecificationInfo(
                     MethodInfo(
@@ -96,6 +96,16 @@ class SpecForProcessor : AbstractProcessor() {
                 )
             }
         )
+    }
+
+    fun TypeElement.toClassifierType(): ClassifierType {
+        return if (this.nestingKind.isNested) {
+            ClassifierType(
+                "${MoreElements.asType(this.enclosingElement).toClassifierType().javaName}$${this.simpleName}"
+            )
+        } else {
+            ClassifierType(this.qualifiedName.toString())
+        }
     }
 
     private fun TypeMirror.toJvmType(): Type {
@@ -113,7 +123,7 @@ class SpecForProcessor : AbstractProcessor() {
             TypeKind.NONE -> TODO("NONE TYPE")
             TypeKind.NULL -> ClassifierType("java/lang/Object")
             TypeKind.ARRAY -> ArrayType(MoreTypes.asArray(this).componentType.toJvmType())
-            TypeKind.DECLARED -> ClassifierType(MoreTypes.asTypeElement(this).qualifiedName.toString())
+            TypeKind.DECLARED -> MoreTypes.asTypeElement(this).toClassifierType()
             TypeKind.ERROR -> TODO("ERROR TYPE")
             TypeKind.TYPEVAR -> MoreTypes.asTypeVariable(this).lowerBound.toJvmType()
             TypeKind.WILDCARD -> TODO("WILDCARD TYPE")
@@ -223,7 +233,11 @@ class SpecForProcessor : AbstractProcessor() {
     private fun saveSpecs(specs: List<ClassSpecificationInfo>) {
         checkForErrors()
 
-        val resourceFile: FileObject = processingEnv.filer.getResource(StandardLocation.CLASS_OUTPUT, "space.kiibou.jguard.spec", "ClassSpecs.json")
+        val resourceFile: FileObject = processingEnv.filer.getResource(
+            StandardLocation.CLASS_OUTPUT,
+            "space.kiibou.jguard.spec",
+            "ClassSpecs.json"
+        )
 
         ensureExists(resourceFile)
 

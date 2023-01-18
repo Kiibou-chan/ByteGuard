@@ -11,7 +11,7 @@ import flatspec._
 import matchers._
 import org.junit.jupiter.api.Test
 import org.opalj.util.InMemoryClassLoader
-import space.kiibou.jguard.processor.info.{BooleanType, ClassSpecificationInfo, ClassifierType, MethodInfo, MethodSpecificationInfo}
+import space.kiibou.jguard.processor.info.{BooleanType, ClassSpecificationInfo, ClassifierType, MethodInfo, MethodSpecificationInfo, VoidType}
 
 import java.io.{ByteArrayInputStream, File}
 import java.nio.file.{Files, Path, StandardOpenOption}
@@ -64,22 +64,48 @@ class BytecodeWeaverTest extends AnyFlatSpec with Matchers {
             StandardOpenOption.CREATE,
             StandardOpenOption.WRITE
         )
-
-        val classLoader = new InMemoryClassLoader(
-            Map(
-                "space.kiibou.jguard.bytecode.IteratorWrapper" -> newBytecode
-            ),
-            getClass.getClassLoader
-        )
-
-        val instrumentedClass = classLoader.loadClass("space.kiibou.jguard.bytecode.IteratorWrapper")
-
     }
 
-    /*
-    val constructor = instrumentedClass.getConstructor(classOf[util.Iterator[_]])
+    @Test
+    def generateGuardedMethodCode(): Unit = {
+        val iteratorWrapperBytes = loadClassBytes("space/kiibou/jguard/bytecode/GuardedMethod.class")
 
-    val instance = constructor.newInstance(List("a", "b", "c").asJava)
-     */
+        val specInfo = new ClassSpecificationInfo(
+            new ClassifierType("space.kiibou.jguard.bytecode.GuardedMethod$GuardedMethodSpec"),
+            new ClassifierType("space.kiibou.jguard.bytecode.GuardedMethod"),
+            List(
+                new MethodSpecificationInfo(
+                    new MethodInfo(
+                        "toggleMethod",
+                        "toggleMethod",
+                        VoidType.INSTANCE,
+                        List().asJava
+                    )
+                ),
+                new MethodSpecificationInfo(
+                    new MethodInfo(
+                        "method",
+                        "method",
+                        VoidType.INSTANCE,
+                        List().asJava
+                    )
+                )
+            ).asJava
+        )
+
+        val weaver = new BytecodeWeaver(iteratorWrapperBytes, specInfo)
+
+        val newBytecode = weaver.weave()
+
+        new File("./build/test/space/kiibou/jguard/bytecode/").mkdirs()
+
+        Files.write(
+            Path.of("./build/test/space/kiibou/jguard/bytecode/GuardedMethod.class"),
+            newBytecode,
+            StandardOpenOption.CREATE,
+            StandardOpenOption.WRITE
+        )
+    }
+
 
 }

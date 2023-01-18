@@ -8,10 +8,10 @@ import org.opalj.br._
 import org.opalj.br.instructions._
 import org.opalj.br.reader.Java17Framework
 import space.kiibou.jguard.Guard
-import space.kiibou.jguard.bytecode.BytecodeWeaver.{IllegalStateExceptionType, GuardViolationExceptionType, wrongReturnValueExceptionConstructor}
+import space.kiibou.jguard.bytecode.BytecodeWeaver.{GuardViolationExceptionType, IllegalStateExceptionType, wrongReturnValueExceptionConstructor}
 import space.kiibou.jguard.processor.info.ClassSpecificationInfo
 import space.kiibou.jguard.specification.GuardSpec
-import space.kiibou.jguard.specification.method.{MethodSpec, MethodSpecComponent, ReturnsPredicate, WhenConsequence}
+import space.kiibou.jguard.specification.method.{MethodSpec, MethodSpecComponent, ReturnsPredicate, WhenCondition, WhenConsequence}
 
 import java.io.ByteArrayInputStream
 import java.lang.reflect.{Field => JField}
@@ -74,28 +74,10 @@ class BytecodeWeaver(private val bytecode: Array[Byte], private val classSpecInf
         classFile.methodsWithBody.map { method =>
             if (methodSpecs.contains(method.name)) {
                 transformMethod(classFile, method)
-            } else if (method.name == "<init>") {
-                addGuardInitsToConstructor(classFile, method)
             } else {
                 method.copy()
             }
         }.to(ArraySeq)
-    }
-
-    private def addGuardInitsToConstructor(classFile: ClassFile, method: Method): MethodTemplate = {
-        val code = method.body.get
-
-        val labeledCode = LabeledCode(code)
-
-        guardFields.foreach { field =>
-            labeledCode.insert(0, InsertionPosition.Before, Seq(
-                ALOAD_0,
-                if (field.get(spec).asInstanceOf[Guard].initialState() == Guard.State.SET) ICONST_1 else ICONST_0,
-                PUTFIELD(classFile.thisType, field.getName, BooleanType)
-            ))
-        }
-
-        method.copy(body = Some(labeledCode.result(classFile.version, method)._1))
     }
 
     private def transformMethod(classFile: ClassFile, method: Method): MethodTemplate = {
@@ -105,30 +87,59 @@ class BytecodeWeaver(private val bytecode: Array[Byte], private val classSpecInf
 
         val methodSpecComponents = methodSpecs(method.name).components()
 
-        // handle RequiresGuardState
-        methodSpecComponents.foreach {
-            case requires: MethodSpecComponent.RequiresGuardState => addRequires(classFile, method, labeledCode, requires)
-            case _ =>
+        if (method.name == "<init>") {
+            handleConstructorGuardFieldInits(classFile, labeledCode)
         }
 
-        // handle WhenReturnsThenConsequence
-        val whenReturnsComponents = methodSpecComponents.collect {
-            case whenReturns: MethodSpecComponent.WhenReturnsThenConsequence => whenReturns
-        }
-
-        if (whenReturnsComponents.length > 0) {
-            val returnTarget = getUniqueSymbol("return_jump_target")
-
-            val consequenceCode = getConsequenceCode(method, whenReturnsComponents)
-
-            val returnPCs = for (PCAndInstruction(pc, _: ReturnInstruction) <- code) yield pc
-            labeledCode.insert(returnPCs.last, InsertionPosition.Before, Seq[CodeElement[AnyRef]](returnTarget) :++ consequenceCode)
-            for (pc <- returnPCs.toList.reverse.tail) labeledCode.replace(pc, Seq(GOTO(returnTarget)))
-        }
+        handleRequiresGuardState(classFile, method, labeledCode, methodSpecComponents)
+        handleWhenThenConsequence(method, labeledCode, methodSpecComponents)
 
         val (newCode, _) = labeledCode.result(classFile.version, method)
 
         method.copy(body = Some(newCode))
+    }
+
+    private def handleWhenThenConsequence(method: Method, labeledCode: LabeledCode, methodSpecComponents: Array[MethodSpecComponent]): Unit = {
+        val whenComponents = methodSpecComponents.collect {
+            case whenReturns: MethodSpecComponent.WhenComponent => whenReturns
+        }
+
+        if (whenComponents.isEmpty) {
+            return
+        }
+
+        val returnTarget = getUniqueSymbol("return_jump_target")
+
+        val consequenceCode = getWhenComponentCode(method, whenComponents)
+
+        val returnPCs = for (PCAndInstruction(pc, _: ReturnInstruction) <- labeledCode.originalCode) yield pc
+
+        labeledCode.insert(
+            returnPCs.last,
+            InsertionPosition.Before,
+            Seq[CodeElement[AnyRef]](returnTarget) :++ consequenceCode
+        )
+
+        for (pc <- returnPCs.toList.reverse.tail) {
+            labeledCode.replace(pc, Seq(GOTO(returnTarget)))
+        }
+    }
+
+    private def handleRequiresGuardState(classFile: ClassFile, method: Method, labeledCode: LabeledCode, methodSpecComponents: Array[MethodSpecComponent]): Unit = {
+        methodSpecComponents.foreach {
+            case requires: MethodSpecComponent.RequiresGuardState => addRequires(classFile, method, labeledCode, requires)
+            case _ =>
+        }
+    }
+
+    private def handleConstructorGuardFieldInits(classFile: ClassFile, labeledCode: LabeledCode): Unit = {
+        guardFields.foreach { field =>
+            labeledCode.insert(0, InsertionPosition.Before, Seq(
+                ALOAD_0,
+                if (field.get(spec).asInstanceOf[Guard].initialState() == Guard.State.SET) ICONST_1 else ICONST_0,
+                PUTFIELD(classFile.thisType, field.getName, BooleanType)
+            ))
+        }
     }
 
     private def addRequires(classFile: ClassFile, method: Method, labeledCode: LabeledCode, requires: MethodSpecComponent.RequiresGuardState): Unit = {
@@ -150,28 +161,28 @@ class BytecodeWeaver(private val bytecode: Array[Byte], private val classSpecInf
         ))
     }
 
-    private def getConsequenceCode(method: Method, consequences: Array[MethodSpecComponent.WhenReturnsThenConsequence]): Seq[CodeElement[AnyRef]] = {
-        consequences.flatMap { whenReturns =>
-            val predicate = whenReturns.predicate()
-            val thenConsequence = whenReturns.consequence()
+    private def getWhenComponentCode(method: Method, components: Array[MethodSpecComponent.WhenComponent]): Seq[CodeElement[AnyRef]] = {
+        components.flatMap { whenComponent =>
+            val jumpTarget = getUniqueSymbol("predicate")
+            val condition = whenComponent.condition()
 
-            val consequenceCode: Seq[CodeElement[AnyRef]] = thenConsequence match {
-                case resets: WhenConsequence.ResetsGuard => Seq(
-                    ALOAD_0,
-                    ICONST_0,
-                    PUTFIELD(method.classFile.thisType, indexGuardNameMap(resets.guard().index()), BooleanType)
-                )
-                case sets: WhenConsequence.SetsGuard => Seq(
-                    ALOAD_0,
-                    ICONST_1,
-                    PUTFIELD(method.classFile.thisType, indexGuardNameMap(sets.guard().index()), BooleanType)
-                )
+            val conditionCode: Seq[CodeElement[AnyRef]] = getWhenConditionCode(method, jumpTarget, condition)
+
+            val consequenceCode: Seq[CodeElement[AnyRef]] = whenComponent match {
+                case consequence: MethodSpecComponent.WhenThenConsequence =>
+                    getWhenConsequenceCode(method, consequence.consequence()) :++
+                        Seq[CodeElement[AnyRef]](jumpTarget)
+                case consequence: MethodSpecComponent.WhenThenElseConsequence =>
+                    val endTarget = getUniqueSymbol("when_end")
+
+                    getWhenConsequenceCode(method, consequence.thenConsequence()) :++
+                        Seq[CodeElement[AnyRef]](GOTO(endTarget)) :++
+                        Seq[CodeElement[AnyRef]](jumpTarget) :++
+                        getWhenConsequenceCode(method, consequence.elseConsequence()) :++
+                        Seq[CodeElement[AnyRef]](endTarget)
             }
 
-            predicate match {
-                case _: ReturnsPredicate.NoArgs => consequenceCode
-                case value: ReturnsPredicate.Value => getReturnsPredicateWithValueCode(method, value, consequenceCode)
-            }
+            conditionCode :++ consequenceCode
         }.toSeq
     }
 
@@ -203,10 +214,37 @@ class BytecodeWeaver(private val bytecode: Array[Byte], private val classSpecInf
 
      */
 
-    private def getReturnsPredicateWithValueCode(method: Method, value: ReturnsPredicate.Value, thenConsequenceCode: Seq[CodeElement[AnyRef]]): Seq[CodeElement[AnyRef]] = {
-        val jumpTarget = getUniqueSymbol("value_incorrectly_set")
+    private def getWhenConsequenceCode(method: Method, thenConsequence: WhenConsequence): Seq[CodeElement[AnyRef]] = {
+        thenConsequence match {
+            case resets: WhenConsequence.ResetsGuard => Seq(
+                ALOAD_0,
+                ICONST_0,
+                PUTFIELD(method.classFile.thisType, indexGuardNameMap(resets.guard().index()), BooleanType)
+            )
+            case sets: WhenConsequence.SetsGuard => Seq(
+                ALOAD_0,
+                ICONST_1,
+                PUTFIELD(method.classFile.thisType, indexGuardNameMap(sets.guard().index()), BooleanType)
+            )
+        }
+    }
 
-        val check: Seq[CodeElement[AnyRef]] = method.returnType match {
+    private def getWhenConditionCode(method: Method, jumpTarget: Symbol, condition: WhenCondition): Seq[CodeElement[AnyRef]] = {
+        condition match {
+            case condition: WhenCondition.GuardCondition => Seq(
+                ALOAD_0,
+                GETFIELD(method.classFile.thisType, indexGuardNameMap(condition.guardState().guard().index()), BooleanType),
+                if (condition.guardState().state() == Guard.State.SET) IFEQ(jumpTarget) else IFNE(jumpTarget)
+            )
+            case returns: WhenCondition.Returns => returns.predicate() match {
+                case _: ReturnsPredicate.NoArgs => Seq()
+                case value: ReturnsPredicate.Value => getReturnsPredicateWithValueCode(method, value, jumpTarget)
+            }
+        }
+    }
+
+    private def getReturnsPredicateWithValueCode(method: Method, value: ReturnsPredicate.Value, jumpTarget: Symbol): Seq[CodeElement[AnyRef]] = {
+        method.returnType match {
             case BooleanType =>
                 Seq[CodeElement[AnyRef]](
                     DUP, // retV, retV
@@ -241,8 +279,6 @@ class BytecodeWeaver(private val bytecode: Array[Byte], private val classSpecInf
                 )
             case _ => ???
         }
-
-        check :++ thenConsequenceCode :++ Seq[CodeElement[AnyRef]](jumpTarget)
     }
 
     private def toClassFile(bytecode: Array[Byte]): ClassFile = {
@@ -260,6 +296,10 @@ class BytecodeWeaver(private val bytecode: Array[Byte], private val classSpecInf
      */
     private def getIndexGuardNameMap(spec: GuardSpec, guardFields: List[JField]): Map[Int, String] = {
         guardFields.map { field =>
+            if (!field.trySetAccessible()) {
+                throw new IllegalAccessException(s"Class ${getClass.getSimpleName} could not obtain access to ${field.getDeclaringClass.getSimpleName}#${field.getName}")
+            }
+
             val guard = field.get(spec).asInstanceOf[Guard]
 
             guard.index() -> field.getName

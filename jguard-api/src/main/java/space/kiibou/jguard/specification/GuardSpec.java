@@ -1,10 +1,7 @@
 package space.kiibou.jguard.specification;
 
 import space.kiibou.jguard.Guard;
-import space.kiibou.jguard.specification.method.MethodSpec;
-import space.kiibou.jguard.specification.method.MethodSpecComponent;
-import space.kiibou.jguard.specification.method.ReturnsPredicate;
-import space.kiibou.jguard.specification.method.WhenConsequence;
+import space.kiibou.jguard.specification.method.*;
 
 public abstract class GuardSpec {
 
@@ -22,8 +19,12 @@ public abstract class GuardSpec {
         return new MethodSpec(args);
     }
 
-    protected final MethodSpecComponent when(final ReturnsPredicate predicate, final WhenConsequence consequence) {
-        return MethodSpecComponent.whenReturnsThen(predicate, consequence);
+    protected final WhenCondition when(final ReturnsPredicate predicate) {
+        return new WhenCondition.Returns(predicate);
+    }
+
+    protected final WhenCondition when(final GuardState state) {
+        return new WhenCondition.GuardCondition(state);
     }
 
     protected final ReturnsPredicate returns() {
@@ -34,12 +35,12 @@ public abstract class GuardSpec {
         return ReturnsPredicate.value(value);
     }
 
-    protected final WhenConsequence sets(final Guard guard) {
-        return WhenConsequence.setsGuard(guard);
+    protected final WhenConsequence set(final Guard guard) {
+        return WhenConsequence.setGuard(guard);
     }
 
-    protected final WhenConsequence resets(final Guard guard) {
-        return WhenConsequence.resetsGuard(guard);
+    protected final WhenConsequence reset(final Guard guard) {
+        return WhenConsequence.resetGuard(guard);
     }
 
     protected final MethodSpecComponent requires(final GuardState state) {

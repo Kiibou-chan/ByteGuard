@@ -30,8 +30,12 @@ data class ClassSpecificationInfo(val specClassType: ClassifierType, val targetC
 
     fun getSpecInstance(): GuardSpec {
         val specClass = getSpecClass()
+        val constructor = specClass.getDeclaredConstructor()
+        constructor.trySetAccessible()
 
-        return specClass.getConstructor().newInstance()
+        val returnVar = constructor.newInstance()
+
+        return returnVar
     }
 
 }
@@ -44,6 +48,7 @@ data class MethodSpecificationInfo(val methodInfo: MethodInfo) {
 
     fun getMethodSpec(javaClass: Class<out GuardSpec>, guardSpec: GuardSpec): MethodSpec {
         val specMethod = methodInfo.getSpecMethod(javaClass)
+        specMethod.trySetAccessible()
 
         return specMethod.invoke(guardSpec, *Array<Any?>(specMethod.parameterCount) { null }) as MethodSpec
     }

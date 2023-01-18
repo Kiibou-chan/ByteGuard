@@ -12,14 +12,14 @@ public final class IteratorGuardSpec extends GuardSpec {
 
     public MethodSpec hasNext() {
         return methodSpec(
-                when(returns(true), sets(canCallNext))
+                when(returns(true)).then(set(canCallNext))
         );
     }
 
     public MethodSpec next() {
         return methodSpec(
                 requires(canCallNext.isSet()),
-                when(returns(), resets(canCallNext))
+                when(returns()).then(reset(canCallNext))
         );
     }
 

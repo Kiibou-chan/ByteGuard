@@ -7,7 +7,8 @@ import java.security.ProtectionDomain
 
 class JGuardClassFileTransformer(classSpecInfos: List<ClassSpecificationInfo>) : ClassFileTransformer {
 
-    private val nameSpecInfoMap: Map<String, ClassSpecificationInfo> = classSpecInfos.associateBy { it.targetClassType.javaName.replace('.', '/') }
+    private val nameSpecInfoMap: Map<String, ClassSpecificationInfo> =
+        classSpecInfos.associateBy { it.targetClassType.javaName.replace('.', '/') }
 
     override fun transform(
         loader: ClassLoader?,

@@ -10,11 +10,11 @@ public sealed interface WhenConsequence {
     record ResetsGuard(Guard guard) implements WhenConsequence {
     }
 
-    static WhenConsequence setsGuard(final Guard guard) {
+    static WhenConsequence setGuard(final Guard guard) {
         return new SetsGuard(guard);
     }
 
-    static WhenConsequence resetsGuard(final Guard guard) {
+    static WhenConsequence resetGuard(final Guard guard) {
         return new ResetsGuard(guard);
     }
 
