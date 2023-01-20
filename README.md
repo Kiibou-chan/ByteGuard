@@ -17,13 +17,13 @@ analysis approaches and implement a suit of hybrid analyses.
 
 ## General Structure
 
-### annotations
+### jguard-api
 
 Contains all annotations and classes to allow annotations of guards and constraints on api classes.
 
 ### annotation-processor
 
-Uses [annotations](#annotations), [auto-service](https://github.com/google/auto/tree/main/service).
+Uses [jguard-api](#jguard-api), [auto-service](https://github.com/google/auto/tree/main/service).
 
 Generates meta information files and classes which are read by the agent at load-time.
 These encode all information necessary to correctly weave the check bytecode into the classes.
@@ -38,8 +38,10 @@ in maintenance.
 
 ### agent
 
-Uses [bytecode-weaving](#bytecode-weaving), [annotations](#annotations).
+Uses [bytecode-weaving](#bytecode-weaving), [jguard-api](#jguard-api).
 
+To use the agent in a subproject of jguard-agent, add `-javaagent:$ProjectFileDir$/agent/build/libs/agent-1.0-SNAPSHOT.jar` to the jvm
+arguments in an IntelliJ run configuration. `$ProjectFileDir$` points to the root directory of the root project.
 
 ## API-Internal Annotation
 
@@ -47,4 +49,10 @@ Uses [bytecode-weaving](#bytecode-weaving), [annotations](#annotations).
 
 ## API-External Annotation
 
-
+When writing specifications for classes which are loaded by the jvm BootstrapClassloader (like the standard library)
+before our agent is loaded, the agent can not intercept the bytecode before it is loaded. Thus, we can not add new
+fields to the class, which is necessary for injecting guards. If the class is not final (we are assuming that this
+usually happens with interfaces like Iterator), we can create a wrapper class which implements the checks correctly.
+If the class is from the java standard library or another library accessible statically at compile time, we can create
+a table of constructor invocations which we then can instrument such that the created objects are wrapped by our checked
+implementation.
