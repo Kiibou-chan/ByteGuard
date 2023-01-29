@@ -4,7 +4,7 @@ plugins {
     kotlin("jvm")
 }
 
-group = "space.kiibou.jguard"
+group = "space.kiibou.byteguard"
 version = "1.0-SNAPSHOT"
 
 repositories {
@@ -20,7 +20,7 @@ dependencies {
 
     // Subproject Dependencies
 
-    implementation(project(":jguard-api"))
+    implementation(project(":byteguard-api"))
     implementation(project(":bytecode-weaving"))
 
     implementation(project(":annotation-processor"))
@@ -43,7 +43,7 @@ tasks.jar {
         attributes(
             "Can-Redefine-Classes" to false,
             "Can-Retransform-Classes" to false,
-            "Premain-Class" to "space.kiibou.jguard.agent.PreMainAgent"
+            "Premain-Class" to "space.kiibou.byteguard.agent.PreMainAgent"
         )
     }
 }

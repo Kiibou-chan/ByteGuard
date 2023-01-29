@@ -2,7 +2,7 @@ plugins {
     scala
 }
 
-group = "space.kiibou.jguard"
+group = "space.kiibou.byteguard"
 version = "1.0-SNAPSHOT"
 
 repositories {
@@ -14,7 +14,7 @@ repositories {
 dependencies {
     implementation("de.opal-project:framework_2.13:4.0.1-SNAPSHOT")
 
-    implementation(project(":jguard-api"))
+    implementation(project(":byteguard-api"))
 
     // TODO (Svenja, 2023/01/09): Move the internal api into a separate subproject?
     implementation(project(":annotation-processor"))

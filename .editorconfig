@@ -1,2 +1,15 @@
+[*]
+insert_final_newline = true
+
 [*.scala]
 indent_size = 4
+indent_style = space
+
+[*.kt]
+indent_size = 4
+indent_style = space
+
+[*.java]
+indent_size = 4
+indent_style = space
+ij_java_continuation_indent_size = 8

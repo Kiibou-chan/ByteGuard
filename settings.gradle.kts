@@ -1,6 +1,6 @@
-rootProject.name = "jguard-agent"
+rootProject.name = "byteguard"
 
-include("jguard-api")
+include("byteguard-api")
 include("annotation-processor")
 include("bytecode-weaving")
 include("agent")

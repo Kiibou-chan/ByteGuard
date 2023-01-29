@@ -1,29 +1,28 @@
-# JGuard-Agent
+# ByteGuard
 
-JGuard-Agent is an implementation of JGuard using annotation processing and a java agent to add guards at load-time if 
-needed. The original JGuard introduces new syntax elements into the java language to annotate functions and classes with
-guards and constraints. It then uses a custom compiler to compile the java code with the guards and constraints (or 
+ByteGuard is an implementation of jGuard using annotation processing and a java agent to add guards at load-time if
+needed. The original jGuard introduces new syntax elements into the java language to annotate functions and classes with
+guards and constraints. It then uses a custom compiler to compile the java code with the guards and constraints (or
 without them).
 
-For JGuard, direct access to the library sourcecode is needed to implement the constraints. With our approach, this is 
-not the case. We allow api-internal, as well as api-external annotation methodologies to tell JGuard-Agent which checks
-to implement at load-time. This way, JGuard-Agent can also ingest specification languages like CrySL and create guards 
-and constraints based on those specifications.
+The rules for ByteGuard guards and checks are not written in the same class they apply to. Instead, they exist in
+external classes. This also means, that it is in principle possible to use other "api-external" specification languages
+like CrySL as input for ByteGuard.
 
-Since we can read the bytecode directly, we can also, in principle, do some static checking on the code. JGuard for
+Since we can read the bytecode directly, we can also, in principle, do some static checking on the code. jGuard for
 example can not encode the `hardCoded` rule from CrySL, since the JVM does not allow such introspection through
-reflection. JGuard-Agent can implement such static checks. Thus, JGuard-Agent can incorporate static and dynamic
+reflection. ByteGuard can implement such static checks. Thus, ByteGuard can incorporate static and dynamic
 analysis approaches and implement a suit of hybrid analyses.
 
 ## General Structure
 
-### jguard-api
+### byteguard-api
 
 Contains all annotations and classes to allow annotations of guards and constraints on api classes.
 
 ### annotation-processor
 
-Uses [jguard-api](#jguard-api), [auto-service](https://github.com/google/auto/tree/main/service).
+Uses [byteguard-api](#byteguard-api), [auto-service](https://github.com/google/auto/tree/main/service).
 
 Generates meta information files and classes which are read by the agent at load-time.
 These encode all information necessary to correctly weave the check bytecode into the classes.
@@ -38,16 +37,17 @@ in maintenance.
 
 ### agent
 
-Uses [bytecode-weaving](#bytecode-weaving), [jguard-api](#jguard-api).
+Uses [bytecode-weaving](#bytecode-weaving), [byteguard-api](#byteguard-api).
 
-To use the agent in a subproject of jguard-agent, add `-javaagent:$ProjectFileDir$/agent/build/libs/agent-1.0-SNAPSHOT.jar` to the jvm
+To use the agent in a subproject of ByteGuard,
+add `-javaagent:$ProjectFileDir$/agent/build/libs/agent-1.0-SNAPSHOT.jar` to the jvm
 arguments in an IntelliJ run configuration. `$ProjectFileDir$` points to the root directory of the root project.
 
-## API-Internal Annotation
+## Writing ByteGuard checks for an API
 
+## Known Difficulties
 
-
-## API-External Annotation
+### Instrumenting Bootstrap Classes
 
 When writing specifications for classes which are loaded by the jvm BootstrapClassloader (like the standard library)
 before our agent is loaded, the agent can not intercept the bytecode before it is loaded. Thus, we can not add new
@@ -56,3 +56,7 @@ usually happens with interfaces like Iterator), we can create a wrapper class wh
 If the class is from the java standard library or another library accessible statically at compile time, we can create
 a table of constructor invocations which we then can instrument such that the created objects are wrapped by our checked
 implementation.
+
+### Dealing with Inheritance
+
+

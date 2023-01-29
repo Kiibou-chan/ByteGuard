@@ -6,7 +6,7 @@ plugins {
     kotlin("plugin.serialization")
 }
 
-group = "space.kiibou.jguard"
+group = "space.kiibou.byteguard"
 version = "1.0-SNAPSHOT"
 
 repositories {
@@ -23,7 +23,7 @@ dependencies {
 
     // Subproject Dependencies
 
-    implementation(project(":jguard-api"))
+    implementation(project(":byteguard-api"))
 
     // Test Dependencies
 

@@ -6,7 +6,7 @@ plugins {
     kotlin("plugin.serialization") version "1.8.0"
 }
 
-group = "space.kiibou.jguard"
+group = "space.kiibou.byteguard"
 version = "1.0-SNAPSHOT"
 
 repositories {

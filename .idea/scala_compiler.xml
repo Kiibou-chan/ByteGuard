@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ScalaCompilerConfiguration">
-    <profile name="Gradle 1" modules="jguard-agent.bytecode-weaving.main,jguard-agent.bytecode-weaving.test">
+    <profile name="Gradle 1" modules="byteguard.bytecode-weaving.main,byteguard.bytecode-weaving.test,jguard-agent.bytecode-weaving.main,jguard-agent.bytecode-weaving.test">
       <option name="deprecationWarnings" value="true" />
       <option name="uncheckedWarnings" value="true" />
       <parameters>

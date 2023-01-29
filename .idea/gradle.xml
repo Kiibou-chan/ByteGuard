@@ -13,7 +13,7 @@
             <option value="$PROJECT_DIR$/agent" />
             <option value="$PROJECT_DIR$/annotation-processor" />
             <option value="$PROJECT_DIR$/bytecode-weaving" />
-            <option value="$PROJECT_DIR$/jguard-api" />
+            <option value="$PROJECT_DIR$/byteguard-api" />
           </set>
         </option>
       </GradleProjectSettings>
