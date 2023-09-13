@@ -92,7 +92,7 @@ class BytecodeWeaver(private val bytecode: Array[Byte], private val classSpecInf
 
         val labeledCode = LabeledCode(code)
 
-        val methodSpecComponents = methodSpecs((method.name -> method.parameterTypes)).components()
+        val methodSpecComponents = methodSpecs(method.name -> method.parameterTypes).components()
 
         if (method.name == "<init>") {
             handleConstructorGuardFieldInits(labeledCode)
@@ -140,7 +140,7 @@ class BytecodeWeaver(private val bytecode: Array[Byte], private val classSpecInf
             if (requires.guardState().state() == Guard.State.SET) IFNE(labelName) else IFEQ(labelName),
             NEW(GuardViolationExceptionType),
             DUP,
-            LDC_W(ConstantString(s"Guard Violation: Guard $name in method ${classFile.thisType.toJava}#${method.name} should be set to ${requires.guardState().state()} but was set to ${requires.guardState().state().negate()}")),
+            LDC_W(ConstantString(s"Guard Violation: Guard $name should be ${requires.guardState().state()} but was ${requires.guardState().state().negate()}")),
             INVOKESPECIAL(GuardViolationExceptionType, isInterface = false, "<init>", JustTakes(ObjectType.String)),
             ATHROW,
             labelName
