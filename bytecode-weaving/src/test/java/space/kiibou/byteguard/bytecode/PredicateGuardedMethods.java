@@ -18,19 +18,13 @@ public class PredicateGuardedMethods {
 
         public MethodSpec method() {
             return methodSpec(
-                    requires(() -> {
-                        System.out.println("test1");
-                        return false;
-                    })
+                    requires(() -> false)
             );
         }
 
         public MethodSpec method(String str) {
             return methodSpec(
-                    requires(() -> {
-                        System.out.println("test2");
-                        return str.startsWith("a");
-                    })
+                    requires(() -> str.startsWith("a"))
             );
         }
 
