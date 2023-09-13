@@ -1,5 +1,6 @@
 package space.kiibou.byteguard.agent
 
+import space.kiibou.byteguard.bytecode.BytecodeWeaver
 import space.kiibou.byteguard.processor.info.ClassSpecificationInfo
 import java.io.IOException
 import java.lang.instrument.ClassFileTransformer
@@ -27,7 +28,7 @@ class ByteGuardClassFileTransformer(classSpecInfos: List<ClassSpecificationInfo>
 
             val specInfo = nameSpecInfoMap[className]!!
 
-            val weaver = _root_ide_package_.space.kiibou.byteguard.bytecode.BytecodeWeaver(classfileBuffer, specInfo)
+            val weaver = BytecodeWeaver(classfileBuffer, specInfo)
 
             val newBytecode = weaver.weave()
 
