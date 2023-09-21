@@ -41,3 +41,6 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+
+### Custom ###
+/.idea/omt-odt-plugin-settings.xml
