@@ -7,6 +7,7 @@ import org.opalj.br.analyses.{Project, SomeProject}
 import org.opalj.br.reader.Java17Framework
 import space.kiibou.byteguard.Guard
 import space.kiibou.byteguard.bytecode.BytecodeWeaver.{loadClassBytes, toClassFile}
+import space.kiibou.byteguard.bytecode.factory.{BytecodeProducerFactory, BytecodeProducerFactoryImpl}
 import space.kiibou.byteguard.bytecode.producer.BytecodeProducer
 import space.kiibou.byteguard.processor.info
 import space.kiibou.byteguard.processor.info.{ClassSpecificationInfo, ClassifierType}

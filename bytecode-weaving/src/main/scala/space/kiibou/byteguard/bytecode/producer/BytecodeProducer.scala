@@ -2,11 +2,7 @@ package space.kiibou.byteguard.bytecode.producer
 
 import org.opalj.ba.CodeElement
 import org.opalj.br.{FieldTemplates, MethodTemplates}
-
-trait Location
-
-case object PreCondition extends Location
-case object PostCondition extends Location
+import space.kiibou.byteguard.bytecode.Location
 
 trait BytecodeProducer {
 

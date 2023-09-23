@@ -1,9 +1,11 @@
-package space.kiibou.byteguard.bytecode.producer
+package space.kiibou.byteguard.bytecode.producer.impl
 
 import org.opalj.ba.{CodeElement, InsertionPosition, LabeledCode}
 import org.opalj.br.instructions.{GOTO, ReturnInstruction}
-import org.opalj.br.{Code, FieldTemplates, Method, MethodTemplates, PCAndInstruction}
-import space.kiibou.byteguard.bytecode.{BytecodeProducerFactory, BytecodeWeaver}
+import org.opalj.br.{FieldTemplates, Method, MethodTemplates, PCAndInstruction}
+import space.kiibou.byteguard.bytecode.factory.BytecodeProducerFactory
+import space.kiibou.byteguard.bytecode.producer.BytecodeProducer
+import space.kiibou.byteguard.bytecode.{BytecodeWeaver, Location, PostCondition, PreCondition}
 import space.kiibou.byteguard.specification.method.MethodSpecComponent
 import space.kiibou.byteguard.specification.method.MethodSpecComponent.{RequiresGuardState, RequiresPredicate, WhenComponent}
 

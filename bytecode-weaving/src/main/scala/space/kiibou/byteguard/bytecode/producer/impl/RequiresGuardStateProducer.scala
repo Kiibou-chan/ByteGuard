@@ -1,12 +1,13 @@
-package space.kiibou.byteguard.bytecode.producer
+package space.kiibou.byteguard.bytecode.producer.impl
 
-import org.opalj.ba.{CodeElement, InsertionPosition}
+import org.opalj.ba.CodeElement
 import org.opalj.br.MethodDescriptor.JustTakes
-import org.opalj.br.instructions.{ALOAD_0, ATHROW, DUP, GETFIELD, IFEQ, IFNE, INVOKESPECIAL, LDC_W, NEW}
 import org.opalj.br._
+import org.opalj.br.instructions.{ALOAD_0, ATHROW, DUP, GETFIELD, IFEQ, IFNE, INVOKESPECIAL, LDC_W, NEW}
 import space.kiibou.byteguard.Guard
-import space.kiibou.byteguard.bytecode.BytecodeWeaver
+import space.kiibou.byteguard.bytecode.{BytecodeWeaver, Location, PreCondition}
 import space.kiibou.byteguard.bytecode.BytecodeWeaver.GuardViolationExceptionType
+import space.kiibou.byteguard.bytecode.producer.BytecodeProducer
 import space.kiibou.byteguard.specification.method.MethodSpecComponent.RequiresGuardState
 
 import scala.collection.immutable.ArraySeq

@@ -1,10 +1,11 @@
-package space.kiibou.byteguard.bytecode.producer
+package space.kiibou.byteguard.bytecode.producer.impl
 
 import org.opalj.ba.CodeElement
-import org.opalj.br.instructions.{ALOAD_0, DCMPL, DUP, DUP2, FCMPL, GETFIELD, GOTO, ICONST_0, ICONST_1, IFEQ, IFNE, IF_ICMPNE, LCMP, LDC_W, PUTFIELD}
 import org.opalj.br._
+import org.opalj.br.instructions.{ALOAD_0, DCMPL, DUP, DUP2, FCMPL, GETFIELD, GOTO, ICONST_0, ICONST_1, IFEQ, IFNE, IF_ICMPNE, LCMP, LDC_W, PUTFIELD}
 import space.kiibou.byteguard.Guard
-import space.kiibou.byteguard.bytecode.BytecodeWeaver
+import space.kiibou.byteguard.bytecode.{BytecodeWeaver, Location, PostCondition}
+import space.kiibou.byteguard.bytecode.producer.BytecodeProducer
 import space.kiibou.byteguard.specification.method.MethodSpecComponent.WhenComponent
 import space.kiibou.byteguard.specification.method.{MethodSpecComponent, ReturnsPredicate, WhenCondition, WhenConsequence}
 
@@ -103,6 +104,5 @@ class WhenProducer(private val weaver: BytecodeWeaver, private val method: Metho
             )
         }
     }
-
 
 }

@@ -1,4 +1,4 @@
-package space.kiibou.byteguard.bytecode
+package space.kiibou.byteguard.bytecode.factory
 
 import org.opalj.br.Method
 import space.kiibou.byteguard.bytecode.producer.BytecodeProducer

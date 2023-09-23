@@ -1,9 +1,10 @@
-package space.kiibou.byteguard.bytecode.producer
+package space.kiibou.byteguard.bytecode.producer.impl
 
 import org.opalj.ba.CodeElement
 import org.opalj.bi.ACC_PUBLIC
 import org.opalj.br.{BooleanType, Field, FieldTemplates, MethodTemplates}
-import space.kiibou.byteguard.bytecode.BytecodeWeaver
+import space.kiibou.byteguard.bytecode.{BytecodeWeaver, Location}
+import space.kiibou.byteguard.bytecode.producer.BytecodeProducer
 
 import scala.collection.immutable.ArraySeq
 

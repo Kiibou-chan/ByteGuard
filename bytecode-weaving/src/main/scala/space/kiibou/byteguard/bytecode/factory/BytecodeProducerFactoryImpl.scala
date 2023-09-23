@@ -1,7 +1,9 @@
-package space.kiibou.byteguard.bytecode
+package space.kiibou.byteguard.bytecode.factory
 
 import org.opalj.br.Method
+import space.kiibou.byteguard.bytecode.BytecodeWeaver
 import space.kiibou.byteguard.bytecode.producer._
+import space.kiibou.byteguard.bytecode.producer.impl._
 import space.kiibou.byteguard.specification.method.MethodSpecComponent
 import space.kiibou.byteguard.specification.method.MethodSpecComponent.{RequiresGuardState, WhenComponent}
 

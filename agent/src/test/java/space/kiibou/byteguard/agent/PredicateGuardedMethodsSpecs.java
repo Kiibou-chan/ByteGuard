@@ -5,7 +5,7 @@ import space.kiibou.byteguard.specification.GuardSpec;
 import space.kiibou.byteguard.specification.method.MethodSpec;
 
 @SpecFor("space.kiibou.byteguard.agent.PredicateGuardedMethods")
-class PredicateGuardedMethodsSpecs extends GuardSpec {
+public class PredicateGuardedMethodsSpecs extends GuardSpec {
 
     public MethodSpec method() {
         return methodSpec(

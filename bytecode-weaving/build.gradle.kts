@@ -27,6 +27,9 @@ dependencies {
     testImplementation("org.scalatest:scalatest_3:3.2.15")
     testImplementation("org.scalatestplus:junit-4-13_3:3.2.15.0")
     testImplementation("org.scalatestplus:scalacheck-1-17_2.13:3.2.15.0")
+
+    // implementation("org.ow2.asm:asm:9.5")
+    // implementation("org.ow2.asm:asm-util:9.5")
 }
 
 tasks.getByName<Test>("test") {
