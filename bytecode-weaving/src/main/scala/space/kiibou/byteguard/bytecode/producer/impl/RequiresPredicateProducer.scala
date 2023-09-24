@@ -1,11 +1,11 @@
 package space.kiibou.byteguard.bytecode.producer.impl
 
 import org.opalj.ai.ValueOrigin
-import org.opalj.ba.CodeElement
+import org.opalj.ba.{CodeElement, LabeledCode}
 import org.opalj.bi.ACC_SYNTHETIC
 import org.opalj.br.MethodDescriptor.JustTakes
 import org.opalj.br._
-import org.opalj.br.instructions.{ALOAD, ALOAD_0, ATHROW, DLOAD, DUP, FLOAD, IFNE, ILOAD, INVOKESPECIAL, INVOKESTATIC, LDC_W, LLOAD, NEW}
+import org.opalj.br.instructions.{ALOAD, ALOAD_0, ATHROW, DLOAD, DUP, FLOAD, GETFIELD, IFNE, ILOAD, INVOKESPECIAL, INVOKESTATIC, INVOKEVIRTUAL, LDC_W, LLOAD, NEW, PUTFIELD}
 import org.opalj.collection.immutable.IntTrieSet
 import org.opalj.tac._
 import org.opalj.value.ValueInformation
@@ -61,23 +61,22 @@ class RequiresPredicateProducer(private val weaver: BytecodeWeaver,
 
         val result: AITACode[TACMethodParameter, ValueInformation] = tacKey(specMethod)
 
-        val originParameterMap: Map[ValueOrigin, (Int, FieldType)] = getOriginParameterMap(method)
+        val originParameterMap: Map[ValueOrigin, (Opcode, FieldType)] = getOriginParameterMap(method)
 
-        val predicatesData: Seq[RequiresPredicateData] = (for {
-            Assignment(_, _, VirtualFunctionCall(_, _, _, "requires", requiresPredicateGuardMethodDescriptor, _, ArraySeq(UVar(_, defSites)))) <- result.stmts
-            (Assignment(_, _, InvokedynamicFunctionCall(_, BootstrapMethod(_, ArraySeq(_, InvokeStaticMethodHandle(receiverType, _, lambdaName, lambdaMethodDescriptor), _)), _, _, capturedValues: Seq[UVar[ValueInformation]])), index) <- result.stmts.zipWithIndex if defSites.contains(index)
-            // TODO (Svenja, 2023/01/24): Currently we only handle invokestatic calls to the lambda, so instance capturing lambdas would not be processed correctly
-        } yield RequiresPredicateData(
-            receiverType,
-            lambdaName,
-            lambdaMethodDescriptor,
-            isInstanceCapturing(capturedValues),
-            getCapturedParameters(specMethod, defSites, originParameterMap, capturedValues)
-        )).toSeq
+        val shadowedFields = getShadowedFields(weaver.specClassFile, weaver.classFile)
 
-        for (predicateData <- predicatesData) yield {
+        val staticPredicatesData: Seq[RequiresPredicateData] = getStaticPredicateData(specMethod, result, originParameterMap)
+        val icPredicateData: Seq[RequiresPredicateData] = getInstanceCapturingPredicateData(specMethod, result, originParameterMap)
+
+        for (predicateData <- staticPredicatesData :++ icPredicateData) yield {
             genMethods :++= weaver.specClassFile.findMethod(predicateData.lambdaName, predicateData.lambdaMethodDescriptor).map { m =>
-                m.copy(accessFlags = m.accessFlags ^ ACC_SYNTHETIC.mask, name = m.name + "_guard_predicate")
+                val body: Option[Code] = if (predicateData.isInstanceCapturing) {
+                    fixFieldAccess(m.body.get)
+                } else {
+                    m.body
+                }
+
+                m.copy(body = body, accessFlags = m.accessFlags ^ ACC_SYNTHETIC.mask, name = m.name + "_guard_predicate")
             }
 
             val labelName = weaver.getUniqueSymbol("predicate_is_true")
@@ -93,8 +92,16 @@ class RequiresPredicateProducer(private val weaver: BytecodeWeaver,
                         case _: ReferenceType => ALOAD(index)
                     }
                 },
+                if (predicateData.isInstanceCapturing) {
+                    Seq[CodeElement[AnyRef]](
+                        INVOKEVIRTUAL(weaver.classFile.thisType, predicateData.lambdaName + "_guard_predicate", predicateData.lambdaMethodDescriptor)
+                    )
+                } else {
+                    Seq[CodeElement[AnyRef]](
+                        INVOKESTATIC(weaver.classFile.thisType, isInterface = false, predicateData.lambdaName + "_guard_predicate", predicateData.lambdaMethodDescriptor)
+                    )
+                },
                 Seq[CodeElement[AnyRef]](
-                    INVOKESTATIC(weaver.classFile.thisType, isInterface = false, predicateData.lambdaName + "_guard_predicate", predicateData.lambdaMethodDescriptor),
                     IFNE(labelName),
                     NEW(PredicateViolationExceptionType),
                     DUP,
@@ -105,6 +112,32 @@ class RequiresPredicateProducer(private val weaver: BytecodeWeaver,
                 )
             ).flatten
         }
+    }
+
+    private def getInstanceCapturingPredicateData(specMethod: Method, result: AITACode[TACMethodParameter, ValueInformation], originParameterMap: Map[ValueOrigin, (Opcode, FieldType)]) = {
+        (for {
+            Assignment(_, _, VirtualFunctionCall(_, _, _, "requires", requiresPredicateGuardMethodDescriptor, _, ArraySeq(UVar(_, defSites)))) <- result.stmts
+            (Assignment(_, _, InvokedynamicFunctionCall(_, BootstrapMethod(_, ArraySeq(_, InvokeVirtualMethodHandle(receiverType, lambdaName, lambdaMethodDescriptor), _)), _, _, capturedValues: Seq[UVar[ValueInformation]])), index) <- result.stmts.zipWithIndex if defSites.contains(index)
+        } yield RequiresPredicateData(
+            receiverType,
+            lambdaName,
+            lambdaMethodDescriptor,
+            isInstanceCapturing(capturedValues),
+            getCapturedParameters(specMethod, defSites, originParameterMap, capturedValues)
+        )).toSeq
+    }
+
+    private def getStaticPredicateData(specMethod: Method, result: AITACode[TACMethodParameter, ValueInformation], originParameterMap: Map[ValueOrigin, (Opcode, FieldType)]) = {
+        (for {
+            Assignment(_, _, VirtualFunctionCall(_, _, _, "requires", requiresPredicateGuardMethodDescriptor, _, ArraySeq(UVar(_, defSites)))) <- result.stmts
+            (Assignment(_, _, InvokedynamicFunctionCall(_, BootstrapMethod(_, ArraySeq(_, InvokeStaticMethodHandle(receiverType, _, lambdaName, lambdaMethodDescriptor), _)), _, _, capturedValues: Seq[UVar[ValueInformation]])), index) <- result.stmts.zipWithIndex if defSites.contains(index)
+        } yield RequiresPredicateData(
+            receiverType,
+            lambdaName,
+            lambdaMethodDescriptor,
+            isInstanceCapturing(capturedValues),
+            getCapturedParameters(specMethod, defSites, originParameterMap, capturedValues)
+        )).toSeq
     }
 
     private def isInstanceCapturing(capturedValues: Seq[DUVar[ValueInformation]]): Boolean = {
@@ -136,12 +169,38 @@ class RequiresPredicateProducer(private val weaver: BytecodeWeaver,
     private def getOriginParameterMap(method: Method): Map[ValueOrigin, (Int, FieldType)] = {
         var currentIndex: ValueOrigin = -2
 
-        method.parameterTypes.zipWithIndex.map { case (paramType, argIndex) =>
+        Map(-1 -> (0, method.classFile.thisType)) ++ method.parameterTypes.zipWithIndex.map { case (paramType, argIndex) =>
             val index = currentIndex
 
             currentIndex -= paramType.operandSize
 
             index -> (argIndex + 1, paramType)
         }.toMap
+    }
+
+    private def getShadowedFields(spec: ClassFile, guarded: ClassFile): Seq[(Field, Field)] = {
+        spec.fields.flatMap { field =>
+            guarded.findField(field.name, field.fieldType).map(it => field -> it)
+        }
+    }
+
+    private def fixFieldAccess(code: Code): Option[Code] = {
+        val labeledCode = LabeledCode(code)
+
+        for (PCAndInstruction(pc, GETFIELD(weaver.specClassFile.thisType, name, fieldType)) <- code) {
+            labeledCode.replace(pc, Seq[CodeElement[AnyRef]](
+                GETFIELD(weaver.classFile.thisType, name, fieldType)
+            ))
+        }
+
+        for (PCAndInstruction(pc, PUTFIELD(weaver.specClassFile.thisType, name, fieldType)) <- code) {
+            labeledCode.replace(pc, Seq[CodeElement[AnyRef]](
+                PUTFIELD(weaver.classFile.thisType, name, fieldType)
+            ))
+        }
+
+        val (newCode, _) = labeledCode.result(weaver.classFile.version, method)
+
+        Some(newCode)
     }
 }

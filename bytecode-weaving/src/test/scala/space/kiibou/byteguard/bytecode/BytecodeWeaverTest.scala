@@ -182,4 +182,51 @@ class BytecodeWeaverTest extends AnyFlatSpec with Matchers {
         assertViolatesPredicate(method.invoke(instance, "a", 1.0, null))
     }
 
+    @Test
+    def generateInstanceCapturingReqPredCode(): Unit = {
+        val instanceCapturingReqPredBytes = loadClassBytes("space/kiibou/byteguard/bytecode/InstanceCapturingReqPred.class")
+
+        val specInfo = new ClassSpecificationInfo(
+            new ClassifierType("space.kiibou.byteguard.bytecode.InstanceCapturingReqPred$InstanceCapturingReqPredSpec"),
+            new ClassifierType("space.kiibou.byteguard.bytecode.InstanceCapturingReqPred"),
+            List(
+                new MethodSpecificationInfo(
+                    new MethodInfo(
+                        "unit",
+                        "unit",
+                        StringType,
+                        List().asJava
+                    )
+                ),
+                new MethodSpecificationInfo(
+                    new MethodInfo(
+                        "concat",
+                        "concat",
+                        StringType,
+                        List(StringType).asJava
+                    )
+                ),
+                new MethodSpecificationInfo(
+                    new MethodInfo(
+                        "concat",
+                        "concat",
+                        StringType,
+                        List(StringType, StringType, StringType).asJava
+                    )
+                ),
+            ).asJava
+        )
+
+
+        val newBytecode = new BytecodeWeaver(instanceCapturingReqPredBytes, specInfo).weave()
+
+        val classMap = Map(
+            "space.kiibou.byteguard.bytecode.InstanceCapturingReqPred" -> newBytecode
+        )
+
+        dumpClasses(classMap)
+
+        val loader = new InMemoryClassLoader(classMap)
+    }
+
 }
