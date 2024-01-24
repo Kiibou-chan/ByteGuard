@@ -23,7 +23,7 @@ class RequiresGuardStateProducer(private val weaver: BytecodeWeaver,
 
         val labelName = weaver.getUniqueSymbol(s"${name}_correctly_set")
 
-        Seq((PreCondition, Seq[CodeElement[AnyRef]](
+        Seq(PreCondition -> Seq[CodeElement[AnyRef]](
             ALOAD_0,
             GETFIELD(weaver.classFile.thisType, name, BooleanType), // push state of the guard
             if (requires.guardState().state() == Guard.State.SET) IFNE(labelName) else IFEQ(labelName),
@@ -33,6 +33,6 @@ class RequiresGuardStateProducer(private val weaver: BytecodeWeaver,
             INVOKESPECIAL(GuardViolationExceptionType, isInterface = false, "<init>", JustTakes(ObjectType.String)),
             ATHROW,
             labelName
-        )))
+        ))
     }
 }

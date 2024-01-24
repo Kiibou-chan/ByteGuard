@@ -14,16 +14,16 @@ data class ClassSpecificationInfo(
     val methodSpecs: List<MethodSpecificationInfo>
 ) {
 
-    fun getSpecClass(): Class<out GuardSpec> {
+    fun getSpecClass(classLoader: ClassLoader): Class<out GuardSpec> {
         @Suppress("UNCHECKED_CAST")
-        val specClass: Class<out GuardSpec> = Class.forName(specClassType.javaName) as Class<out GuardSpec>
+        val specClass: Class<out GuardSpec> = classLoader.loadClass(specClassType.javaName) as Class<out GuardSpec>
 
         return specClass
     }
 
-    fun getGuardFields(): List<Field> {
+    fun getGuardFields(classLoader: ClassLoader): List<Field> {
         val guardClass: Class<Guard> = Guard::class.java
-        val specClass: Class<out GuardSpec> = getSpecClass()
+        val specClass: Class<out GuardSpec> = getSpecClass(classLoader)
 
         val guardFields: List<Field> = specClass.fields
             .filter { it.declaringClass == specClass }
@@ -32,8 +32,8 @@ data class ClassSpecificationInfo(
         return guardFields
     }
 
-    fun getSpecInstance(): GuardSpec {
-        val specClass = getSpecClass()
+    fun getSpecInstance(classLoader: ClassLoader): GuardSpec {
+        val specClass = getSpecClass(classLoader)
         val constructor = specClass.getDeclaredConstructor()
         constructor.trySetAccessible()
 

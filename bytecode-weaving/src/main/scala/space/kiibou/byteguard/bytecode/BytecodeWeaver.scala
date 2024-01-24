@@ -1,6 +1,6 @@
 package space.kiibou.byteguard.bytecode
 
-import org.opalj.ba.toDA
+import org.opalj.ba.{ProjectBasedInMemoryClassLoader, toDA}
 import org.opalj.bc.Assembler
 import org.opalj.br._
 import org.opalj.br.analyses.{Project, SomeProject}
@@ -24,12 +24,7 @@ class BytecodeWeaver(private val bytecode: Array[Byte], private val classSpecInf
     val classFile: ClassFile = toClassFile(bytecode)
 
     val specClassFile: ClassFile = toClassFile(loadClassBytes(classSpecInfo.getSpecClassType))
-    val specClass: Class[_ <: GuardSpec] = classSpecInfo.getSpecClass
-    val guardFields: List[JField] = classSpecInfo.getGuardFields.asScala.toList
 
-    val spec: GuardSpec = classSpecInfo.getSpecInstance
-    val indexGuardNameMap: Map[Int, String] = getIndexGuardNameMap(spec, guardFields)
-    val methodSpecs: Map[(String, FieldTypes), MethodSpec] = getNameMethodSpecMap(specClass, spec)
 
     val project: SomeProject = Project[URL](
         List(
@@ -39,7 +34,14 @@ class BytecodeWeaver(private val bytecode: Array[Byte], private val classSpecInf
         // org.opalj.bytecode.RTJar
     )
 
-    private var additionalMethods: Seq[MethodTemplate] = Seq.empty[MethodTemplate]
+    private val classLoader = new ProjectBasedInMemoryClassLoader(project)
+
+    val specClass: Class[_ <: GuardSpec] = classSpecInfo.getSpecClass(classLoader)
+    val guardFields: List[JField] = classSpecInfo.getGuardFields(classLoader).asScala.toList
+
+    val spec: GuardSpec = classSpecInfo.getSpecInstance(classLoader)
+    val indexGuardNameMap: Map[Int, String] = getIndexGuardNameMap(spec, guardFields)
+    val methodSpecs: Map[(String, FieldTypes), MethodSpec] = getNameMethodSpecMap(specClass, spec)
 
     private var symbolIndex = 0
 

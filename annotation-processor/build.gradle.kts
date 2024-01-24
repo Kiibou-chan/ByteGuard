@@ -28,6 +28,8 @@ dependencies {
     // Test Dependencies
 
     testImplementation(kotlin("test"))
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
     // testImplementation(kotlin("test-junit"))
 }
 

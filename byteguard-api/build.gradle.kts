@@ -15,6 +15,7 @@ dependencies {
     // Test Dependencies
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.9.1")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 tasks.getByName<Test>("test") {

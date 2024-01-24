@@ -29,14 +29,16 @@ dependencies {
     // Test Dependencies
 
     testImplementation(kotlin("test"))
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
     // testImplementation(kotlin("test-junit"))
 }
 
 tasks.getByName<Test>("test") {
     useJUnitPlatform()
 
-    jvmArgs("-javaagent:$rootDir/agent/build/libs/agent-1.0-SNAPSHOT.jar")
-}
+    jvmArgs("-javaagent:$rootDir/agent/build/libs/agent-1.0-SNAPSHOT.jar") //, "-Xlog:class+init=info:../out/loaded.txt")
+}.dependsOn(tasks.getByName("jar"))
 
 tasks.jar {
     manifest {
